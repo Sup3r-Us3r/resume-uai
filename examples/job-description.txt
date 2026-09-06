@@ -1,0 +1,13 @@
+Job Title: Staff Backend Engineer - Cloud & Distributed Systems
+Company: CloudScale Dynamics
+Location: Remote (US / Latin America)
+
+About the Role:
+We are seeking a Staff Backend Engineer to design and scale our next-generation cloud streaming platform. In this role, you will lead architectural initiatives, optimize microservice latencies, and mentor engineering teams.
+
+Key Requirements:
+- 7+ years of experience in backend development using Go, TypeScript, or Node.js.
+- Strong proficiency in distributed systems, event-driven architectures, and messaging queues (Apache Kafka, RabbitMQ, Redis).
+- Deep experience with cloud platforms (AWS / GCP), container orchestration (Kubernetes, Docker), and Infrastructure as Code (Terraform).
+- Track record of performance optimization for high-throughput relational and non-relational databases (PostgreSQL, Redis).
+- Strong communication skills and experience establishing engineering standards and CI/CD pipelines.
