@@ -24,8 +24,8 @@ export class MockAIProvider implements AIProvider {
         website: "https://alexrivera.dev"
       },
       headline: isPt
-        ? "Engenheiro de Software Sênior | Sistemas Distribuídos e Arquitetura Cloud"
-        : "Senior Software Engineer | Distributed Systems & Cloud Architecture",
+        ? "Engenheiro de Software Sênior • Sistemas Distribuídos e Arquitetura Cloud"
+        : "Senior Software Engineer • Distributed Systems & Cloud Architecture",
       summary:
         "Results-oriented Senior Software Engineer with over 8 years of hands-on experience designing, scaling, and maintaining mission-critical distributed systems. Proven track record of architecting resilient microservices in Node.js and TypeScript, reducing system latency by 35% and enhancing deployment automation across multi-cloud environments.",
       skills: {
@@ -36,6 +36,7 @@ export class MockAIProvider implements AIProvider {
         cloud: ["AWS", "GCP", "Kubernetes", "Docker", "Terraform"],
         devops: ["CI/CD", "GitHub Actions", "Prometheus", "Grafana"],
         tools: ["Git", "Linux", "Postman", "Jest", "Vitest"],
+        ai: ["LangChain", "LangGraph", "Google ADK", "Model Context Protocol (MCP)", "Prompt Engineering"],
         methodologies: ["Agile/Scrum", "TDD", "Domain-Driven Design", "Microservices"],
         other: ["System Architecture", "REST APIs", "GraphQL"]
       },
@@ -140,7 +141,7 @@ export class MockAIProvider implements AIProvider {
     if (rawContent.includes("Product Manager") || rawContent.includes("Gerente de Produto")) {
       return {
         ...defaultResume,
-        headline: "Lead Product Manager | B2B SaaS & Growth",
+        headline: "Lead Product Manager • B2B SaaS & Growth",
         summary:
           "Strategic Lead Product Manager with 7+ years delivering customer-centric SaaS products from discovery to scale. Proven history driving $12M ARR expansion, leading cross-functional squads of engineers, designers, and marketers.",
         skills: {
@@ -151,6 +152,7 @@ export class MockAIProvider implements AIProvider {
           cloud: ["AWS", "Mixpanel", "Amplitude"],
           devops: ["Jira", "Confluence"],
           tools: ["Figma", "Tableau", "Segment", "Notion"],
+          ai: [],
           methodologies: ["Scrum", "Product Discovery", "Dual-Track Agile", "OKR Frameworks"],
           other: ["User Research", "Go-To-Market Strategy", "A/B Testing", "Pricing & Packaging"]
         }

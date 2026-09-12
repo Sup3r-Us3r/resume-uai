@@ -22,11 +22,12 @@ interface PdfLabels {
   databases: string;
   cloud: string;
   tools: string;
+  ai: string;
   methodologies: string;
   other: string;
   technologies: string;
-  keyAchievement: string;
   present: string;
+  degreeConnector: string;
 }
 
 const PDF_LABELS_PT: PdfLabels = {
@@ -43,11 +44,12 @@ const PDF_LABELS_PT: PdfLabels = {
   databases: "Bancos de Dados",
   cloud: "Nuvem & DevOps",
   tools: "Ferramentas",
+  ai: "Inteligência Artificial",
   methodologies: "Metodologias",
   other: "Outras",
   technologies: "Tecnologias",
-  keyAchievement: "Destaque",
-  present: "Presente"
+  present: "Presente",
+  degreeConnector: "em"
 };
 
 const PDF_LABELS_EN: PdfLabels = {
@@ -64,11 +66,12 @@ const PDF_LABELS_EN: PdfLabels = {
   databases: "Databases",
   cloud: "Cloud & DevOps",
   tools: "Tools",
+  ai: "Artificial Intelligence",
   methodologies: "Methodologies",
   other: "Other",
   technologies: "Technologies",
-  keyAchievement: "Key Achievement",
-  present: "Present"
+  present: "Present",
+  degreeConnector: "in"
 };
 
 export class PdfRenderer implements ResumeRenderer<Buffer> {
@@ -124,10 +127,19 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
     const contactItems: string[] = [];
     if (p.location) contactItems.push(`<span>${this.escapeHtml(p.location)}</span>`);
     if (p.email) contactItems.push(`<a href="mailto:${this.escapeHtml(p.email)}">${this.escapeHtml(p.email)}</a>`);
-    if (p.phone) contactItems.push(`<span>${this.escapeHtml(p.phone)}</span>`);
-    if (p.linkedin) contactItems.push(`<a href="${this.escapeHtml(p.linkedin)}">LinkedIn</a>`);
-    if (p.github) contactItems.push(`<a href="${this.escapeHtml(p.github)}">GitHub</a>`);
-    if (p.website) contactItems.push(`<a href="${this.escapeHtml(p.website)}">Portfolio</a>`);
+    if (p.phone) contactItems.push(`<span>${this.escapeHtml(this.formatPhone(p.phone))}</span>`);
+    if (p.linkedin) {
+      const displayUrl = p.linkedin.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      contactItems.push(`<a href="${this.escapeHtml(p.linkedin)}">${this.escapeHtml(displayUrl)}</a>`);
+    }
+    if (p.github) {
+      const displayUrl = p.github.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      contactItems.push(`<a href="${this.escapeHtml(p.github)}">${this.escapeHtml(displayUrl)}</a>`);
+    }
+    if (p.website) {
+      const displayUrl = p.website.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      contactItems.push(`<a href="${this.escapeHtml(p.website)}">${this.escapeHtml(displayUrl)}</a>`);
+    }
 
     const skillsHtml = this.renderSkillsHtml(resume.skills, labels);
     const experienceHtml = this.renderExperienceHtml(resume.experience, labels);
@@ -297,6 +309,9 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
     if (s.tools?.length) {
       categories.push(`<div class="skill-category"><strong>${this.escapeHtml(labels.tools)}:</strong> ${s.tools.map(this.escapeHtml).join(", ")}</div>`);
     }
+    if (s.ai?.length) {
+      categories.push(`<div class="skill-category"><strong>${this.escapeHtml(labels.ai)}:</strong> ${s.ai.map(this.escapeHtml).join(", ")}</div>`);
+    }
     if (s.methodologies?.length) {
       categories.push(`<div class="skill-category"><strong>${this.escapeHtml(labels.methodologies)}:</strong> ${s.methodologies.map(this.escapeHtml).join(", ")}</div>`);
     }
@@ -318,11 +333,9 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
 
     const items = experiences.map((exp) => {
       const dates = `${this.escapeHtml(exp.startDate)} – ${this.escapeHtml(exp.endDate || (exp.isCurrent ? labels.present : ""))}`;
-      const location = exp.location ? ` | ${this.escapeHtml(exp.location)}` : "";
-      const bullets = [
-        ...(exp.responsibilities || []).map((r) => `<li>${this.escapeHtml(r)}</li>`),
-        ...(exp.achievements || []).map((a) => `<li><strong>${this.escapeHtml(labels.keyAchievement)}:</strong> ${this.escapeHtml(a)}</li>`)
-      ].join("\n");
+      const location = exp.location ? ` • ${this.escapeHtml(exp.location)}` : "";
+      const expBullets = exp.responsibilities?.length ? exp.responsibilities : exp.achievements || [];
+      const bullets = expBullets.map((b) => `<li>${this.escapeHtml(b)}</li>`).join("\n");
 
       const techLine = exp.technologies?.length
         ? `<div class="technologies">${this.escapeHtml(labels.technologies)}: ${exp.technologies.map(this.escapeHtml).join(", ")}</div>`
@@ -353,12 +366,10 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
     if (!education?.length) return "";
 
     const items = education.map((edu) => {
-      const degreeStr =
-        edu.fieldOfStudy && !edu.degree.toLowerCase().includes(edu.fieldOfStudy.toLowerCase())
-          ? `${this.escapeHtml(edu.degree)} in ${this.escapeHtml(edu.fieldOfStudy)}`
-          : this.escapeHtml(edu.degree);
+      const formattedDegree = this.formatDegreeField(edu.degree, edu.fieldOfStudy, labels.degreeConnector);
+      const degreeStr = this.escapeHtml(formattedDegree);
       const dates = edu.endDate ? this.escapeHtml(edu.endDate) : this.escapeHtml(edu.startDate || "");
-      const location = edu.location ? ` | ${this.escapeHtml(edu.location)}` : "";
+      const location = edu.location ? ` • ${this.escapeHtml(edu.location)}` : "";
       const bullets = (edu.achievements || []).map((a) => `<li>${this.escapeHtml(a)}</li>`).join("\n");
 
       return `
@@ -403,7 +414,8 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
 
     const items = projects.map((p) => {
       const role = p.role ? ` (${this.escapeHtml(p.role)})` : "";
-      const link = p.url ? ` | <a href="${this.escapeHtml(p.url)}" style="color: #334155;">Link</a>` : "";
+      const displayUrl = p.url ? p.url.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "") : "";
+      const link = p.url ? ` • <a href="${this.escapeHtml(p.url)}" style="color: #334155;">${this.escapeHtml(displayUrl)}</a>` : "";
       const tech = p.technologies?.length
         ? `<div class="technologies">${this.escapeHtml(labels.technologies)}: ${p.technologies.map(this.escapeHtml).join(", ")}</div>`
         : "";
@@ -440,6 +452,60 @@ export class PdfRenderer implements ResumeRenderer<Buffer> {
     <h2>${this.escapeHtml(labels.languagesHeading)}</h2>
     <p style="font-size: 9.5pt; color: #27272a;">${items}</p>
   </div>`;
+  }
+
+  private formatDegreeField(degree: string, fieldOfStudy: string | undefined, connector: string): string {
+    if (!fieldOfStudy) return degree;
+    const cleanDegree = degree.trim();
+    const cleanField = fieldOfStudy.trim();
+    if (!cleanField) return cleanDegree;
+
+    if (cleanDegree.toLowerCase().includes(cleanField.toLowerCase())) {
+      return cleanDegree;
+    }
+
+    if (/\s+(?:in|em|de)$/i.test(cleanDegree)) {
+      if (connector === "em" && /\s+in$/i.test(cleanDegree)) {
+        return `${cleanDegree.slice(0, -2)}em ${cleanField}`;
+      }
+      return `${cleanDegree} ${cleanField}`;
+    }
+
+    if (/^(?:in|em|de)\s+/i.test(cleanField)) {
+      if (connector === "em" && /^in\s+/i.test(cleanField)) {
+        return `${cleanDegree} em ${cleanField.slice(3)}`;
+      }
+      return `${cleanDegree} ${cleanField}`;
+    }
+
+    return `${cleanDegree} ${connector} ${cleanField}`;
+  }
+
+  private formatPhone(phone: string): string {
+    const trimmed = phone.trim();
+    if (!trimmed) return "";
+
+    // If already formatted with international prefix (e.g. "+1 202-555-0143" or "+55 (31)..."), preserve it
+    if (trimmed.startsWith("+") && /[\s()-]/.test(trimmed)) {
+      return trimmed;
+    }
+
+    const digits = trimmed.replace(/\D/g, "");
+
+    // Brazilian phone with 10 or 11 digits without country code (e.g. 31989486831 or 3189486831)
+    if (digits.length === 11 && !digits.startsWith("1") && !digits.startsWith("0")) {
+      return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10 && !digits.startsWith("1") && !digits.startsWith("0")) {
+      return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    if (digits.length === 13 && digits.startsWith("55")) {
+      return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+    if (digits.length === 12 && digits.startsWith("55")) {
+      return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+    }
+    return phone;
   }
 
   private escapeHtml(str: string): string {

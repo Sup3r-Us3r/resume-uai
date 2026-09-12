@@ -116,7 +116,7 @@ export class ATSAnalyzer {
       feedback: hasHeadline ? "Clear professional headline present." : "Headline or target title is missing.",
       impact: "critical"
     });
-    if (!hasHeadline) suggestions.push("Add a targeted professional headline (e.g., 'Senior Software Engineer | Cloud Architecture').");
+    if (!hasHeadline) suggestions.push("Add a targeted professional headline (e.g., 'Senior Software Engineer • Cloud Architecture').");
 
     const hasSummary = Boolean(resume.summary && resume.summary.trim().length >= 40);
     checks.push({
@@ -181,99 +181,103 @@ export class ATSAnalyzer {
     if (hasExperience) {
       for (const exp of resume.experience) {
         const bullets = [...(exp.responsibilities || []), ...(exp.achievements || [])];
-        for (const bullet of bullets) {
-          totalResponsibilities++;
-          const lower = bullet.toLowerCase().trim();
-          const firstWord = lower.split(/\s+/)[0]?.replace(/[^a-z]/g, "") || "";
-          if (STRONG_ACTION_VERBS.includes(firstWord)) {
+        totalResponsibilities += bullets.length;
+
+        for (const resp of bullets) {
+          const firstWord = resp.trim().split(/\s+/)[0]?.toLowerCase().replace(/[^a-zà-ÿ]/g, "");
+          if (firstWord && (STRONG_ACTION_VERBS.includes(firstWord) || STRONG_ACTION_VERBS.includes(resp.slice(0, 10).toLowerCase()))) {
             actionVerbsFound++;
           }
-          if (metricRegex.test(bullet)) {
+          if (metricRegex.test(resp)) {
             hasMetrics = true;
           }
         }
       }
     }
 
-    const actionVerbRatio = totalResponsibilities > 0 ? actionVerbsFound / totalResponsibilities : 0;
-    const hasGoodVerbs = actionVerbRatio >= 0.4 || actionVerbsFound >= 3;
+    const hasGoodActionVerbs = actionVerbsFound >= 3;
     checks.push({
       id: "exp_action_verbs",
       name: "Strong Action Verbs in Experience Bullets",
       category: "experience",
-      passed: hasGoodVerbs,
-      score: hasGoodVerbs ? 10 : (actionVerbsFound > 0 ? 5 : 0),
+      passed: hasGoodActionVerbs,
+      score: hasGoodActionVerbs ? 10 : Math.min(actionVerbsFound * 3, 10),
       maxScore: 10,
-      feedback: hasGoodVerbs
+      feedback: hasGoodActionVerbs
         ? `Identified strong action verbs (${actionVerbsFound} bullets).`
-        : `Few strong action verbs identified (${actionVerbsFound} found). Use verbs like 'Architected', 'Optimized', 'Delivered'.`,
-      impact: "warning"
+        : "Weak action verbs. Start bullets with strong past-tense verbs (e.g., 'Architected', 'Engineered', 'Desenvolveu', 'Implementou').",
+      impact: "critical"
     });
-    if (!hasGoodVerbs) suggestions.push("Start bullet points with assertive past-tense action verbs (e.g., Developed, Orchestrated, Automated).");
+    if (!hasGoodActionVerbs) suggestions.push("Start every experience bullet with an assertive action verb (Architected, Spearheaded, Built, Optimized).");
 
     checks.push({
-      id: "exp_quantifiable_metrics",
+      id: "exp_metrics",
       name: "Quantifiable Results & Metrics",
       category: "experience",
       passed: hasMetrics,
-      score: hasMetrics ? 8 : 2,
+      score: hasMetrics ? 8 : 0,
       maxScore: 8,
       feedback: hasMetrics
         ? "Bullet points contain measurable results (percentages, latency, throughput, scale)."
-        : "No measurable metrics detected in experience bullets.",
-      impact: "info"
+        : "No quantifiable achievements detected in experience bullets.",
+      impact: "critical"
     });
-    if (!hasMetrics) suggestions.push("Include quantifiable accomplishments where available (e.g., latency reduction, revenue, uptime, volume).");
+    if (!hasMetrics) suggestions.push("Add concrete business metrics to experience bullets (e.g., 'reduced latency by 40%', 'scaled to 100k users').");
 
-    const allExpHaveDates = hasExperience && resume.experience.every((e) => Boolean(e.startDate && e.startDate.trim()));
+    const hasDates = resume.experience.every((e) => Boolean(e.startDate && (e.endDate || e.isCurrent)));
     checks.push({
-      id: "exp_dates_consistency",
+      id: "exp_dates",
       name: "Complete Employment Dates",
       category: "experience",
-      passed: allExpHaveDates,
-      score: allExpHaveDates ? 7 : 0,
+      passed: hasDates,
+      score: hasDates ? 7 : 0,
       maxScore: 7,
-      feedback: allExpHaveDates ? "All work experiences contain explicit start/end dates." : "Some experiences lack start or end dates.",
+      feedback: hasDates ? "All work experiences contain explicit start/end dates." : "Some employment entries are missing dates.",
       impact: "warning"
     });
-    if (!allExpHaveDates) suggestions.push("Ensure every work experience has consistent start and end dates (e.g., '2021-03' or 'March 2021').");
+    if (!hasDates) suggestions.push("Add complete start and end dates (YYYY or MM/YYYY) to all work experiences.");
 
-    // --- 4. SKILLS CATEGORIZATION (Max: 15) ---
-    const populatedCategories = Object.entries(resume.skills).filter(([_, arr]) => Array.isArray(arr) && arr.length > 0).length;
-    const isCategorized = populatedCategories >= 2;
+    // --- 4. SKILLS COVERAGE & DOMAINS (Max: 15) ---
+    const populatedDomains = [
+      resume.skills.programmingLanguages,
+      resume.skills.frameworks,
+      resume.skills.databases,
+      resume.skills.cloud,
+      resume.skills.devops,
+      resume.skills.tools,
+      resume.skills.ai,
+      resume.skills.methodologies
+    ].filter((list) => Array.isArray(list) && list.length > 0).length;
+
+    const hasBroadDomains = populatedDomains >= 3;
     checks.push({
-      id: "skills_categorization",
+      id: "skills_domains",
       name: "Semantic Skills Categorization",
       category: "skills",
-      passed: isCategorized,
-      score: isCategorized ? 8 : 3,
+      passed: hasBroadDomains,
+      score: hasBroadDomains ? 8 : 4,
       maxScore: 8,
-      feedback: isCategorized
-        ? `Skills are categorized across ${populatedCategories} semantic domains.`
-        : "Skills are not categorized across multiple domains.",
+      feedback: `Skills are categorized across ${populatedDomains} semantic domains.`,
       impact: "info"
     });
-    if (!isCategorized) suggestions.push("Group skills into logical ATS groups (Languages, Frameworks, Cloud, Databases).");
 
-    const hasSufficientSkills = totalSkillsCount >= 8;
+    const hasAdequateSkills = totalSkillsCount >= 8;
     checks.push({
-      id: "skills_depth",
+      id: "skills_breadth",
       name: "Adequate Skills Breadth (8+ skills)",
       category: "skills",
-      passed: hasSufficientSkills,
-      score: hasSufficientSkills ? 7 : (totalSkillsCount >= 4 ? 4 : 0),
+      passed: hasAdequateSkills,
+      score: hasAdequateSkills ? 7 : 0,
       maxScore: 7,
-      feedback: hasSufficientSkills
-        ? `Rich technical keywords found (${totalSkillsCount} items).`
-        : `Low keyword density (${totalSkillsCount} items).`,
-      impact: "warning"
+      feedback: hasAdequateSkills ? `Rich technical keywords found (${totalSkillsCount} items).` : "Skills list is too sparse.",
+      impact: "critical"
     });
 
     // --- 5. ATS STRUCTURAL & FORMATTING INTEGRITY (Max: 20) ---
     const textToCheck = rawText || JSON.stringify(resume);
 
     // ATS rule: No Markdown/HTML tables
-    const hasTables = /\|.*\|.*\|/.test(textToCheck) || /<table/i.test(textToCheck);
+    const hasTables = /(?:^|\n)\s*\|.*\|.*\n\s*\|[-:\s|]+\|/m.test(textToCheck) || /<table|<tbody|<tr|<td/i.test(textToCheck);
     checks.push({
       id: "format_no_tables",
       name: "No Tables in Resume Layout",
@@ -415,6 +419,7 @@ export class ATSAnalyzer {
     const detectedDatabases: string[] = [];
     const detectedCloud: string[] = [];
     const detectedTools: string[] = [];
+    const detectedAi: string[] = [];
     const detectedMethodologies: string[] = [];
     const detectedOther: string[] = [];
 
@@ -440,6 +445,12 @@ export class ATSAnalyzer {
           detectedCloud.push(...items);
         } else if (lowerLine.includes("tool") || lowerLine.includes("ferramenta")) {
           detectedTools.push(...items);
+        } else if (
+          lowerLine.includes("inteligência artificial") ||
+          lowerLine.includes("artificial intelligence") ||
+          /\b(?:ia|ai)\b/i.test(parts[0] || "")
+        ) {
+          detectedAi.push(...items);
         } else if (lowerLine.includes("methodolog") || lowerLine.includes("metodolog")) {
           detectedMethodologies.push(...items);
         } else {
@@ -460,17 +471,26 @@ export class ATSAnalyzer {
       const expLines = rawExp.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
       for (const l of expLines) {
         // Exclude role/company lines with dates
-        if (/(?:19|20)\d{2}/.test(l) && (l.includes("—") || l.includes("|") || l.includes("-"))) {
+        if (/(?:19|20)\d{2}/.test(l) && (l.includes("—") || l.includes("|") || l.includes("•") || l.includes("-"))) {
           continue;
         }
-        if (l.startsWith("Technologies:")) {
+        if (l.startsWith("Technologies:") || l.startsWith("Tecnologias:")) {
           continue;
         }
         if (/^[*•\-]\s+/.test(l)) {
-          expBullets.push(l.replace(/^[*•\-]\s+/, "").replace(/^\*\*Key Achievement:\*\*\s*/i, "").trim());
+          expBullets.push(
+            l.replace(/^[*•\-]\s+/, "")
+              .replace(/^\*\*(?:Key Achievement|Destaque):\*\*\s*/i, "")
+              .replace(/^(?:Key Achievement|Destaque):\s*/i, "")
+              .trim()
+          );
         } else if (l.length > 20 && !l.endsWith(":")) {
           // Plain sentence or bullet in PDF
-          expBullets.push(l.replace(/^Key Achievement:\s*/i, "").trim());
+          expBullets.push(
+            l.replace(/^\*\*(?:Key Achievement|Destaque):\*\*\s*/i, "")
+              .replace(/^(?:Key Achievement|Destaque):\s*/i, "")
+              .trim()
+          );
         }
       }
     } else {
@@ -503,6 +523,7 @@ export class ATSAnalyzer {
         cloud: detectedCloud,
         devops: [],
         tools: detectedTools,
+        ai: detectedAi,
         methodologies: detectedMethodologies,
         other: detectedOther
       },
@@ -516,8 +537,8 @@ export class ATSAnalyzer {
               endDate: "Present",
               isCurrent: true,
               summary: "",
-              responsibilities: expBullets.slice(0, 10),
-              achievements: expBullets.slice(10),
+              responsibilities: expBullets,
+              achievements: [],
               technologies: []
             }
           ]

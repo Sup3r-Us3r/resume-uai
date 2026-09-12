@@ -25,13 +25,14 @@ interface RendererLabels {
   cloudSkill: string;
   devopsSkill: string;
   toolsSkill: string;
+  aiSkill: string;
   methodologiesSkill: string;
   otherSkill: string;
-  keyAchievement: string;
   technologies: string;
   noExperience: string;
   noEducation: string;
   present: string;
+  degreeConnector: string;
 }
 
 const LABELS_PT: RendererLabels = {
@@ -49,13 +50,14 @@ const LABELS_PT: RendererLabels = {
   cloudSkill: "Nuvem & Infraestrutura",
   devopsSkill: "DevOps",
   toolsSkill: "Ferramentas & Softwares",
+  aiSkill: "Inteligência Artificial",
   methodologiesSkill: "Metodologias",
   otherSkill: "Outras competências",
-  keyAchievement: "Destaque",
   technologies: "Tecnologias",
   noExperience: "*Nenhum histórico profissional informado.*",
   noEducation: "*Nenhuma formação acadêmica informada.*",
-  present: "Presente"
+  present: "Presente",
+  degreeConnector: "em"
 };
 
 const LABELS_EN: RendererLabels = {
@@ -73,13 +75,14 @@ const LABELS_EN: RendererLabels = {
   cloudSkill: "Cloud & Infrastructure",
   devopsSkill: "DevOps",
   toolsSkill: "Tools & Software",
+  aiSkill: "Artificial Intelligence",
   methodologiesSkill: "Methodologies",
   otherSkill: "Other competencies",
-  keyAchievement: "Key Achievement",
   technologies: "Technologies",
   noExperience: "*No employment history listed.*",
   noEducation: "*No formal education listed.*",
-  present: "Present"
+  present: "Present",
+  degreeConnector: "in"
 };
 
 export class MarkdownRenderer implements ResumeRenderer<string> {
@@ -144,12 +147,48 @@ export class MarkdownRenderer implements ResumeRenderer<string> {
     const parts: string[] = [];
     if (p.location) parts.push(p.location);
     if (p.email) parts.push(p.email);
-    if (p.phone) parts.push(p.phone);
-    if (p.linkedin) parts.push(`[LinkedIn](${p.linkedin})`);
-    if (p.github) parts.push(`[GitHub](${p.github})`);
-    if (p.website) parts.push(`[Website](${p.website})`);
+    if (p.phone) parts.push(this.formatPhone(p.phone));
+    if (p.linkedin) {
+      const displayUrl = p.linkedin.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      parts.push(`[${displayUrl}](${p.linkedin})`);
+    }
+    if (p.github) {
+      const displayUrl = p.github.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      parts.push(`[${displayUrl}](${p.github})`);
+    }
+    if (p.website) {
+      const displayUrl = p.website.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "");
+      parts.push(`[${displayUrl}](${p.website})`);
+    }
 
     return parts.join(" • ");
+  }
+
+  private formatPhone(phone: string): string {
+    const trimmed = phone.trim();
+    if (!trimmed) return "";
+
+    // If already formatted with international prefix (e.g. "+1 202-555-0143" or "+55 (31)..."), preserve it
+    if (trimmed.startsWith("+") && /[\s()-]/.test(trimmed)) {
+      return trimmed;
+    }
+
+    const digits = trimmed.replace(/\D/g, "");
+
+    // Brazilian phone with 10 or 11 digits without country code (e.g. 31989486831 or 3189486831)
+    if (digits.length === 11 && !digits.startsWith("1") && !digits.startsWith("0")) {
+      return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    }
+    if (digits.length === 10 && !digits.startsWith("1") && !digits.startsWith("0")) {
+      return `+55 (${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    if (digits.length === 13 && digits.startsWith("55")) {
+      return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
+    }
+    if (digits.length === 12 && digits.startsWith("55")) {
+      return `+55 (${digits.slice(2, 4)}) ${digits.slice(4, 8)}-${digits.slice(8)}`;
+    }
+    return phone;
   }
 
   private formatSkills(s: Resume["skills"], labels: RendererLabels): string {
@@ -174,6 +213,9 @@ export class MarkdownRenderer implements ResumeRenderer<string> {
     if (s.tools && s.tools.length > 0) {
       lines.push(`* **${labels.toolsSkill}:** ${s.tools.join(", ")}`);
     }
+    if (s.ai && s.ai.length > 0) {
+      lines.push(`* **${labels.aiSkill}:** ${s.ai.join(", ")}`);
+    }
     if (s.methodologies && s.methodologies.length > 0) {
       lines.push(`* **${labels.methodologiesSkill}:** ${s.methodologies.join(", ")}`);
     }
@@ -192,17 +234,15 @@ export class MarkdownRenderer implements ResumeRenderer<string> {
         const header = `### ${exp.position} — ${exp.company}`;
         const endDateStr = exp.endDate || (exp.isCurrent ? labels.present : "");
         const metaParts = [exp.location, `${exp.startDate} – ${endDateStr}`].filter(Boolean);
-        const meta = `*${metaParts.join(" | ")}*`;
+        const meta = `*${metaParts.join(" • ")}*`;
 
         const bullets: string[] = [];
         if (exp.summary) {
           bullets.push(exp.summary);
         }
-        for (const resp of exp.responsibilities || []) {
+        const expBullets = exp.responsibilities?.length ? exp.responsibilities : exp.achievements || [];
+        for (const resp of expBullets) {
           bullets.push(`* ${resp}`);
-        }
-        for (const ach of exp.achievements || []) {
-          bullets.push(`* **${labels.keyAchievement}:** ${ach}`);
         }
 
         let techLine = "";
@@ -220,18 +260,42 @@ export class MarkdownRenderer implements ResumeRenderer<string> {
 
     return education
       .map((edu) => {
-        const degreeField =
-          edu.fieldOfStudy && !edu.degree.toLowerCase().includes(edu.fieldOfStudy.toLowerCase())
-            ? `${edu.degree} in ${edu.fieldOfStudy}`
-            : edu.degree;
+        const degreeField = this.formatDegreeField(edu.degree, edu.fieldOfStudy, labels.degreeConnector);
         const header = `### ${degreeField} — ${edu.institution}`;
         const metaParts = [edu.location, edu.startDate && edu.endDate ? `${edu.startDate} – ${edu.endDate}` : edu.endDate || edu.startDate].filter(Boolean);
-        const meta = metaParts.length > 0 ? `*${metaParts.join(" | ")}*\n` : "";
+        const meta = metaParts.length > 0 ? `*${metaParts.join(" • ")}*\n` : "";
 
         const achs = (edu.achievements || []).map((a) => `* ${a}`).join("\n");
         return `${header}\n${meta}${achs ? `\n${achs}` : ""}`.trim();
       })
       .join("\n\n");
+  }
+
+  private formatDegreeField(degree: string, fieldOfStudy: string | undefined, connector: string): string {
+    if (!fieldOfStudy) return degree;
+    const cleanDegree = degree.trim();
+    const cleanField = fieldOfStudy.trim();
+    if (!cleanField) return cleanDegree;
+
+    if (cleanDegree.toLowerCase().includes(cleanField.toLowerCase())) {
+      return cleanDegree;
+    }
+
+    if (/\s+(?:in|em|de)$/i.test(cleanDegree)) {
+      if (connector === "em" && /\s+in$/i.test(cleanDegree)) {
+        return `${cleanDegree.slice(0, -2)}em ${cleanField}`;
+      }
+      return `${cleanDegree} ${cleanField}`;
+    }
+
+    if (/^(?:in|em|de)\s+/i.test(cleanField)) {
+      if (connector === "em" && /^in\s+/i.test(cleanField)) {
+        return `${cleanDegree} em ${cleanField.slice(3)}`;
+      }
+      return `${cleanDegree} ${cleanField}`;
+    }
+
+    return `${cleanDegree} ${connector} ${cleanField}`;
   }
 
   private formatCertifications(certs: Resume["certifications"], labels: RendererLabels): string {
@@ -253,7 +317,8 @@ export class MarkdownRenderer implements ResumeRenderer<string> {
 
     const items = projects
       .map((p) => {
-        const link = p.url ? ` | [Link](${p.url})` : "";
+        const displayUrl = p.url ? p.url.replace(/^https?:\/\/(?:www\.)?/, "").replace(/\/$/, "") : "";
+        const link = p.url ? ` • [${displayUrl}](${p.url})` : "";
         const role = p.role ? ` (${p.role})` : "";
         const tech = p.technologies && p.technologies.length > 0 ? `\n*${labels.technologies}:* ${p.technologies.join(", ")}` : "";
         const bullets = (p.highlights || []).map((h) => `* ${h}`).join("\n");

@@ -23,6 +23,7 @@ describe('ResumeSchema', () => {
       cloud: ['AWS'],
       devops: ['Docker'],
       tools: ['Git'],
+      ai: ['LangChain', 'Google ADK', 'MCP'],
       methodologies: ['Scrum'],
       other: [],
     },
@@ -137,6 +138,7 @@ describe('ResumeSchema', () => {
     if (parsed.success) {
       expect(parsed.data.skills.databases).toEqual([]);
       expect(parsed.data.skills.cloud).toEqual([]);
+      expect(parsed.data.skills.ai).toEqual([]);
     }
   });
 });

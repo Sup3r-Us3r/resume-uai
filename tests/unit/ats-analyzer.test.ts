@@ -26,6 +26,7 @@ describe("ATSAnalyzer", () => {
       cloud: ["AWS", "GCP", "Kubernetes"],
       devops: ["Terraform", "Docker", "CI/CD"],
       tools: ["Git", "Linux"],
+      ai: [],
       methodologies: ["Agile/Scrum", "TDD"],
       other: []
     },

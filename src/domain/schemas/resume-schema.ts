@@ -18,6 +18,7 @@ export const SkillCategoriesSchema = z.object({
   cloud: z.array(z.string()).default([]),
   devops: z.array(z.string()).default([]),
   tools: z.array(z.string()).default([]),
+  ai: z.array(z.string()).default([]),
   methodologies: z.array(z.string()).default([]),
   other: z.array(z.string()).default([]),
 });

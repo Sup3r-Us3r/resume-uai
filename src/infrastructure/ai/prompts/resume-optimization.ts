@@ -16,9 +16,9 @@ Your mission is to transform raw, unstructured professional profile text into a 
 2. WHAT YOU ARE ALLOWED AND EXPECTED TO DO:
    - Rewrite statements to be clear, articulate, and grammatically impeccable in the requested target language.
    - Begin bullet points with strong, assertive past-tense action verbs (e.g. in English: "Architected", "Engineered", "Spearheaded", "Implemented", "Delivered"; in Portuguese: "Arquitetou", "Desenvolveu", "Implementou", "Liderou", "Otimizou", "Estruturou").
-   - Eliminate redundancies and conversational filler without losing substantive facts.
-   - Normalize dates and designations into professional standards.
-   - Organize technologies into semantic categories (programmingLanguages, frameworks, libraries, databases, cloud, devops, tools, methodologies, other).
+   - Eliminate redundancies and conversational filler without losing substantive facts. Never duplicate bullet points between responsibilities and achievements; integrate action and quantifiable impact into single, high-impact statements.
+   - Normalize dates and designations into professional standards. In the professional headline, use bullets (' • ') instead of pipes (' | ') to separate skills and roles.
+   - Organize technologies into semantic categories (programmingLanguages, frameworks, libraries, databases, cloud, devops, tools, ai, methodologies, other). Put AI/ML models, agent frameworks (e.g. LangChain, LangGraph, Google ADK), LLMs, Model Context Protocol (MCP), prompt engineering, custom skills & rules under "ai".
    - Craft a compelling 3-4 sentence professional summary based STRICTLY on the candidate's actual background.
 3. HANDLING MISSING DATA:
    - If a field is not present in the source (e.g. no phone, no linkedin, no certifications, no GPA), use empty string "" or empty array []. Never use null.
@@ -39,6 +39,7 @@ export function buildResumePrompt(
     ? `TARGET LANGUAGE MANDATE:
 Write and translate the ENTIRE resume content in professional Brazilian Portuguese (Português do Brasil).
 - The headline, summary, responsibilities, achievements, education degree/field, and project descriptions MUST be in natural, executive Portuguese.
+- For education degree and field in Portuguese, use proper Portuguese terminology (e.g., "Bacharelado", "Sistemas de Informação", "Bacharelado em Sistemas de Informação"). Never use English connectives like "in" in Portuguese degree titles or fields.
 - Standard technical keywords and technology names (e.g., React, TypeScript, Docker, AWS, SQS, Golang) should be preserved in their standard industry form.
 - Use "Presente" for current roles.`
     : `TARGET LANGUAGE MANDATE:
